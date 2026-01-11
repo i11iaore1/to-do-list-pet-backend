@@ -5,7 +5,7 @@ from managers import UserManager
 
 class User(AbstractBaseUser):
     email = models.TextField(unique=True)
-    # is_admin = models.BooleanField(default=False)
+    nickname = models.TextField(blank=True)
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
@@ -14,7 +14,7 @@ class User(AbstractBaseUser):
     objects = UserManager()
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ""
+    REQUIRED_FIELDS = []
 
     def __str__(self):
         return f"{self.pk} {self.email}"
