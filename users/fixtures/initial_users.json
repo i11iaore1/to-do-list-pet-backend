@@ -1,1 +1,0 @@
-[{"model": "users.user", "pk": 1, "fields": {"password": "pbkdf2_sha256$1200000$HeQC94ju0JjscEumsFPvZ5$i3OtQpdHJ2KaJACckw21LwnpPxHWq9cmgtjB0ER0KXY=", "last_login": null, "email": "very_first_admin@gmail.com", "nickname": "very_first_admin", "is_staff": true, "is_superuser": true, "is_active": true, "date_joined": "2026-01-11T12:41:45.024Z"}}]
