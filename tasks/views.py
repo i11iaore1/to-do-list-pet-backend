@@ -1,3 +1,11 @@
-from django.shortcuts import render
+from rest_framework import viewsets
+from rest_framework.permissions import AllowAny
 
-# Create your views here.
+from .models import UserTask
+from .serializers import UserTaskSerializer
+
+
+class TaskViewSet(viewsets.ModelViewSet):
+    queryset = UserTask.objects.all()
+    permission_classes = (AllowAny, )
+    serializer_class = UserTaskSerializer
