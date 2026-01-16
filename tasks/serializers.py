@@ -5,8 +5,6 @@ from .models import UserTask
 
 
 class UserTaskSerializer(serializers.ModelSerializer):
-    # status = serializers.CharField(read_only=True) # because i want special views to manage task statuses
-
     class Meta:
         model = UserTask
         fields = ("pk", "description", "status", "due_date", "user", "created_at", "updated_at")
