@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model, authenticate
 
 User = get_user_model()
 
-class UserSerializer(serializers.ModelSerializer):
+class UserResponseSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ("pk", "email", "nickname", "created_at", "updated_at")
@@ -42,3 +42,26 @@ class LoginSerializer(serializers.Serializer):
         attrs["user"] = user
 
         return attrs
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ("pk", "email", "password", "nickname", "created_at", "updated_at")
+
+        read_only_fields = ("pk", "email", "created_at", "updated_at")
+
+        extra_kwargs = {
+            'password': {'write_only': True}
+        }
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop("password", None)
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        if password:
+            instance.set_password(password)
+
+        instance.save()
+        return instance

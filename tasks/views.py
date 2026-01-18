@@ -33,8 +33,8 @@ class UserTaskSingleView(generics.GenericAPIView):
     def patch(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=True)
-        if serializer.is_valid(raise_exception=True):
-            serializer.save()
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
 
         return Response(serializer.data)
 
@@ -84,8 +84,8 @@ class UserTaskPluralView(generics.GenericAPIView):
 
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid(raise_exception=True):
-            serializer.save(user=self.request.user)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(user=request.user)
 
         return Response(
             serializer.data,
@@ -130,6 +130,6 @@ class UserTaskReissueView(generics.GenericAPIView):
                 )
 
         serializer = self.get_serializer(instance, data=request.data, partial=True)
-        if serializer.is_valid(raise_exception=True):
-            serializer.save(status=UserTask.StatusChoices.ISSUED)
-            return Response(serializer.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(status=UserTask.StatusChoices.ISSUED)
+        return Response(serializer.data)

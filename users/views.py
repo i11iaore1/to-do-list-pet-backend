@@ -5,7 +5,8 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .serializers import RegisterSerializer, LoginSerializer, UserSerializer
+from .serializers import RegisterSerializer, LoginSerializer, UserResponseSerializer, UserSerializer
+from .permissions import IsAccountOwnerOrAdmin
 
 
 User = get_user_model()
@@ -19,15 +20,15 @@ class RegisterView(generics.GenericAPIView):
     def post(self, request):
         serializer = self.get_serializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
-
         user = serializer.save()
+
         user_logged_in.send(sender=user.__class__, request=request, user=user)
 
         refresh = RefreshToken.for_user(user)
 
         return Response(
             {
-                "user": UserSerializer(user).data,
+                "user": UserResponseSerializer(user).data,
                 "access_token": str(refresh.access_token),
                 "refresh_token": str(refresh)
             },
@@ -51,10 +52,35 @@ class LoginView(generics.GenericAPIView):
 
         return Response(
             {
-                "user": UserSerializer(user).data,
+                "user": UserResponseSerializer(user).data,
                 "access_token": str(refresh.access_token),
                 "refresh_token": str(refresh)
 
-            },
-            status=status.HTTP_200_OK
+            }
         )
+
+
+class UserSingularView(generics.GenericAPIView):
+    queryset = User.objects.all()
+    permission_classes = (IsAccountOwnerOrAdmin, )
+    serializer_class = UserSerializer
+
+    def get(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+
+        return Response(serializer.data)
+
+    def patch(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(serializer.data)
+
+    def delete(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
