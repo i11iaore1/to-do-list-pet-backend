@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import update_last_login
+from django.contrib.auth.signals import user_logged_in
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -10,17 +10,18 @@ from .serializers import RegisterSerializer, LoginSerializer, UserSerializer
 
 User = get_user_model()
 
-class RegisterView(generics.CreateAPIView):
+
+class RegisterView(generics.GenericAPIView):
     queryset = User.objects.all()
     permission_classes = (AllowAny, )
     serializer_class = RegisterSerializer
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
-        user = serializer.save()
 
-        update_last_login(None, user)
+        user = serializer.save()
+        user_logged_in.send(sender=user.__class__, request=request, user=user)
 
         refresh = RefreshToken.for_user(user)
 
@@ -44,8 +45,7 @@ class LoginView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
 
         user = serializer.validated_data["user"]
-
-        update_last_login(None, user)
+        user_logged_in.send(sender=user.__class__, request=request, user=user)
 
         refresh = RefreshToken.for_user(user)
 
