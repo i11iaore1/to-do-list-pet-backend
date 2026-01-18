@@ -3,18 +3,18 @@ from django.db.models import Q
 
 from rest_framework import viewsets
 from rest_framework import generics, status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
 from .models import UserTask
-from .serializers import UserTaskSerializer
+from .serializers import UserTaskSerializer, StaffUserTaskSerializer, ReissuedUserTaskSerializer
 from .permissions import IsStaffOrTaskOwner
 
 
-class TaskViewSet(viewsets.ModelViewSet):
+class StaffUserTaskViewSet(viewsets.ModelViewSet):
     queryset = UserTask.objects.all()
-    permission_classes = (AllowAny, )
-    serializer_class = UserTaskSerializer
+    permission_classes = (IsAdminUser, )
+    serializer_class = StaffUserTaskSerializer
 
 
 class UserTaskSingleView(generics.GenericAPIView):
@@ -79,7 +79,7 @@ class UserTaskPluralView(generics.GenericAPIView):
                     ).filter(
                         due_date__lt=now
                     )
-            
+
         return queryset
 
     def post(self, request):
@@ -113,3 +113,23 @@ class UserTaskClosureView(generics.GenericAPIView):
         return Response(
             serializer.data
         )
+
+class UserTaskReissueView(generics.GenericAPIView):
+    queryset = UserTask.objects.all()
+    permission_classes = (IsStaffOrTaskOwner, )
+    serializer_class = ReissuedUserTaskSerializer
+
+    def post(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        if instance.status == UserTask.StatusChoices.ISSUED:
+            if instance.due_date is None or not instance.is_expired:
+                return Response(
+                    {"detail":"Task is currently issued and not expired."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        if serializer.is_valid(raise_exception=True):
+            serializer.save(status=UserTask.StatusChoices.ISSUED)
+            return Response(serializer.data)
