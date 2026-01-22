@@ -1,16 +1,12 @@
 from django.urls import path
-from rest_framework.routers import DefaultRouter
 
-from .views import StaffUserTaskViewSet, UserTaskSingleView, UserTaskPluralView, UserTaskClosureView, UserTaskReissueView
+from .views import UserTaskSingleView, UserTaskPluralView, UserTaskClosureView, UserTaskReissueView
 
-router = DefaultRouter()
-router.register(r"staff/user-tasks", StaffUserTaskViewSet)
 
+app_name = "tasks"
 urlpatterns = [
-    path(r"user-tasks/", UserTaskPluralView.as_view()),
-    path(r"user-tasks/<int:pk>/", UserTaskSingleView.as_view()),
-    path(r"user-tasks/<int:pk>/close/", UserTaskClosureView.as_view()),
-    path(r"user-tasks/<int:pk>/reissue/", UserTaskReissueView.as_view())
+    path("user-tasks/", UserTaskPluralView.as_view(), name="user-task-list"),
+    path("user-tasks/<int:pk>/", UserTaskSingleView.as_view(), name="user-task-detail"),
+    path("user-tasks/<int:pk>/close/", UserTaskClosureView.as_view(), name="user-task-close"),
+    path("user-tasks/<int:pk>/reissue/", UserTaskReissueView.as_view(), name="user-task-reissue")
 ]
-
-urlpatterns += router.urls

@@ -1,11 +1,12 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.signals import user_logged_in
 from rest_framework import generics, status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .serializers import RegisterSerializer, LoginSerializer, UserResponseSerializer, UserSerializer
+from core.pagination import NormalDataPagination
+from .serializers import RegisterRequestSerializer, LoginRequestSerializer, UserProfileInfoSerializer
 from .permissions import IsAccountOwnerOrAdmin
 
 
@@ -15,7 +16,7 @@ User = get_user_model()
 class RegisterView(generics.GenericAPIView):
     queryset = User.objects.all()
     permission_classes = (AllowAny, )
-    serializer_class = RegisterSerializer
+    serializer_class = RegisterRequestSerializer
 
     def post(self, request):
         serializer = self.get_serializer(data=request.data, context={"request": request})
@@ -28,7 +29,7 @@ class RegisterView(generics.GenericAPIView):
 
         return Response(
             {
-                "user": UserResponseSerializer(user).data,
+                "user": UserProfileInfoSerializer(user).data,
                 "access_token": str(refresh.access_token),
                 "refresh_token": str(refresh)
             },
@@ -39,7 +40,7 @@ class RegisterView(generics.GenericAPIView):
 class LoginView(generics.GenericAPIView):
     queryset = User.objects.all()
     permission_classes = (AllowAny, )
-    serializer_class = LoginSerializer
+    serializer_class = LoginRequestSerializer
 
     def post(self, request):
         serializer = self.get_serializer(data=request.data, context={"request": request})
@@ -52,10 +53,9 @@ class LoginView(generics.GenericAPIView):
 
         return Response(
             {
-                "user": UserResponseSerializer(user).data,
+                "user": UserProfileInfoSerializer(user).data,
                 "access_token": str(refresh.access_token),
                 "refresh_token": str(refresh)
-
             }
         )
 
@@ -63,7 +63,7 @@ class LoginView(generics.GenericAPIView):
 class UserSingularView(generics.GenericAPIView):
     queryset = User.objects.all()
     permission_classes = (IsAccountOwnerOrAdmin, )
-    serializer_class = UserSerializer
+    serializer_class = UserProfileInfoSerializer
 
     def get(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -84,3 +84,47 @@ class UserSingularView(generics.GenericAPIView):
         instance.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class UserListView(generics.GenericAPIView):
+    queryset = User.objects.all()
+    permission_classes = (IsAdminUser, )
+    serializer_class = UserProfileInfoSerializer
+    pagination_class = NormalDataPagination
+
+    def get(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        page = self.paginate_queryset(queryset)
+
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+
+        return Response(serializer.data)
+
+
+class AdminListView(generics.GenericAPIView):
+    queryset = User.objects.all()
+    permission_classes = (IsAdminUser, )
+    serializer_class = UserProfileInfoSerializer
+    pagination_class = NormalDataPagination
+
+    def get(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        page = self.paginate_queryset(queryset)
+
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+
+        serializer = self.get_serializer(queryset, many=True)
+
+        return Response(serializer.data)
+
+    def get_queryset(self):
+        queryset = User.objects.filter(is_staff=True)
+
+        return queryset

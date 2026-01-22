@@ -1,20 +1,42 @@
-from django.utils import timezone
-from django.db.models import Q
-
-from rest_framework import viewsets
 from rest_framework import generics, status
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
+from core.utils.filters import filter_tasks_by_status
+from core.pagination import NormalDataPagination
 from .models import UserTask
 from .serializers import UserTaskSerializer, StaffUserTaskSerializer, ReissuedUserTaskSerializer
-from .permissions import IsStaffOrTaskOwner
+from .permissions import IsTaskOwner, IsStaffOrTaskOwner
 
 
-class StaffUserTaskViewSet(viewsets.ModelViewSet):
+class UserTaskListView(generics.GenericAPIView):
     queryset = UserTask.objects.all()
     permission_classes = (IsAdminUser, )
     serializer_class = StaffUserTaskSerializer
+    pagination_class = NormalDataPagination
+
+    def get(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        page = self.paginate_queryset(queryset)
+
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+
+        return Response(serializer.data)
+
+    def get_queryset(self):
+        user = self.kwargs["pk"]
+        print(user)
+        queryset = UserTask.objects.filter(user=user)
+
+        task_status = self.request.query_params.get("status")
+        if task_status:
+            queryset = filter_tasks_by_status(queryset, task_status)
+
+        return queryset
 
 
 class UserTaskSingleView(generics.GenericAPIView):
@@ -47,11 +69,18 @@ class UserTaskSingleView(generics.GenericAPIView):
 
 class UserTaskPluralView(generics.GenericAPIView):
     queryset = UserTask.objects.all()
-    permission_classes = (IsStaffOrTaskOwner, )
+    permission_classes = (IsTaskOwner, )
     serializer_class = UserTaskSerializer
+    pagination_class = NormalDataPagination
 
     def get(self, request, *args, **kwargs):
         queryset = self.get_queryset()
+        page = self.paginate_queryset(queryset)
+
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
         serializer = self.get_serializer(queryset, many=True)
 
         return Response(serializer.data)
@@ -60,25 +89,9 @@ class UserTaskPluralView(generics.GenericAPIView):
         user = self.request.user
         queryset = UserTask.objects.filter(user=user)
 
-        status_filter = self.request.query_params.get("status")
-        if status_filter:
-            if status_filter == UserTask.StatusChoices.CLOSED:
-                queryset = queryset.filter(status=UserTask.StatusChoices.CLOSED)
-            else:
-                now = timezone.now()
-
-                if status_filter == UserTask.StatusChoices.ISSUED:
-                    queryset = queryset.filter(
-                        status=UserTask.StatusChoices.ISSUED
-                    ).filter(
-                        Q(due_date__gte=now) | Q(due_date__isnull=True)
-                    )
-                elif status_filter == "expired":
-                    queryset = queryset.exclude(
-                        status=UserTask.StatusChoices.CLOSED
-                    ).filter(
-                        due_date__lt=now
-                    )
+        task_status = self.request.query_params.get("status")
+        if task_status:
+            queryset = filter_tasks_by_status(queryset, task_status)
 
         return queryset
 
@@ -91,6 +104,7 @@ class UserTaskPluralView(generics.GenericAPIView):
             serializer.data,
             status=status.HTTP_201_CREATED
         )
+
 
 class UserTaskClosureView(generics.GenericAPIView):
     queryset = UserTask.objects.all()
@@ -113,6 +127,7 @@ class UserTaskClosureView(generics.GenericAPIView):
         return Response(
             serializer.data
         )
+
 
 class UserTaskReissueView(generics.GenericAPIView):
     queryset = UserTask.objects.all()
