@@ -6,7 +6,7 @@ from core.utils.filters import filter_tasks_by_status
 from core.pagination import NormalDataPagination
 from .models import UserTask
 from .serializers import UserTaskSerializer, StaffUserTaskSerializer, ReissuedUserTaskSerializer
-from .permissions import IsTaskOwner, IsStaffOrTaskOwner
+from .permissions import IsTaskOwner, IsTaskOwnerOrStaff
 
 
 class UserTaskListView(generics.GenericAPIView):
@@ -41,7 +41,7 @@ class UserTaskListView(generics.GenericAPIView):
 
 class UserTaskSingleView(generics.GenericAPIView):
     queryset = UserTask.objects.all()
-    permission_classes = (IsStaffOrTaskOwner, )
+    permission_classes = (IsTaskOwnerOrStaff, )
     serializer_class = UserTaskSerializer
 
     def get(self, request, *args, **kwargs):
@@ -108,7 +108,7 @@ class UserTaskPluralView(generics.GenericAPIView):
 
 class UserTaskClosureView(generics.GenericAPIView):
     queryset = UserTask.objects.all()
-    permission_classes = (IsStaffOrTaskOwner, )
+    permission_classes = (IsTaskOwnerOrStaff, )
     serializer_class = UserTaskSerializer
 
     def post(self, request, *args, **kwargs):
@@ -131,7 +131,7 @@ class UserTaskClosureView(generics.GenericAPIView):
 
 class UserTaskReissueView(generics.GenericAPIView):
     queryset = UserTask.objects.all()
-    permission_classes = (IsStaffOrTaskOwner, )
+    permission_classes = (IsTaskOwnerOrStaff, )
     serializer_class = ReissuedUserTaskSerializer
 
     def post(self, request, *args, **kwargs):

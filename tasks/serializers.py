@@ -14,7 +14,7 @@ class StaffUserTaskSerializer(serializers.ModelSerializer):
         read_only_fields = ("pk", "created_at", "updated_at")
 
     def validate_due_date(self, value):
-        return validate_future_date(value, "Task's due date must be in the future")
+        return validate_future_date(value, {"due_date":"Task's due date must be in the future"})
 
 
 class UserTaskSerializer(serializers.ModelSerializer):
@@ -25,7 +25,7 @@ class UserTaskSerializer(serializers.ModelSerializer):
         read_only_fields = ("pk", "status", "created_at", "updated_at")
 
     def validate_due_date(self, value):
-        return validate_future_date(value, "Task's due date must be in the future")
+        return validate_future_date(value, {"due_date":"Task's due date must be in the future"})
 
 
 class ReissuedUserTaskSerializer(serializers.ModelSerializer):
@@ -37,4 +37,4 @@ class ReissuedUserTaskSerializer(serializers.ModelSerializer):
         read_only_fields = ("pk", "description", "status", "is_expired", "created_at", "updated_at")
 
     def validate_due_date(self, value):
-        return validate_future_date(value, "Task's due date must be in the future")
+        return validate_future_date(value, {"due_date":"Task's due date must be in the future"})

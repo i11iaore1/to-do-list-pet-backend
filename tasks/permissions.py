@@ -8,7 +8,8 @@ class IsTaskOwner(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         return obj.user == request.user
 
-class IsStaffOrTaskOwner(permissions.BasePermission):
+
+class IsTaskOwnerOrStaff(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user and request.user.is_authenticated
 

@@ -20,12 +20,15 @@ class GroupTask(Task):
 
 class Member(models.Model):
     class RoleChoices(models.TextChoices):
+        DEFAULT = "default"
         ADMIN = "admin"
         OWNER = "owner"
 
+    ADMIN_ROLES = (RoleChoices.ADMIN, RoleChoices.OWNER)
+
     user = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="memberships")
     group = models.ForeignKey("groups.Group", on_delete=models.CASCADE, related_name="members")
-    role = models.CharField(null=True, blank=True, max_length=10, choices=RoleChoices.choices)
+    role = models.CharField(max_length=10, choices=RoleChoices.choices, default=RoleChoices.DEFAULT)
     joined_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -49,8 +52,8 @@ class MemberTaskRelation(models.Model):
         on_delete=models.CASCADE,
         related_name="related_members"
     )
-    can_close = models.BooleanField(default=False)
     can_edit = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

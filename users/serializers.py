@@ -47,10 +47,14 @@ class RegisterRequestSerializer(serializers.ModelSerializer):
         fields = ("email", "nickname", "password")
 
         extra_kwargs = {
-            'password': {'write_only': True}
+            "email": {"write_only": True},
+            "nickname": {"write_only": True},
+            "password": {"write_only": True}
         }
 
     def create(self, validated_data):
+        # Mandatory because cant use objects.create
+        # For password hashing 
         return User.objects.create_user(**validated_data)
 
 
@@ -60,7 +64,7 @@ class LoginRequestSerializer(serializers.Serializer):
     takes in (email, password)
     and can only create an account
     """
-    email = serializers.EmailField()
+    email = serializers.EmailField(write_only=True)
     password = serializers.CharField(write_only=True, style={'input_type': 'password'})
 
     def validate(self, attrs):
