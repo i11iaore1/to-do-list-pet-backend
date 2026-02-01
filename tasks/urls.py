@@ -6,8 +6,8 @@ from .views import UserTaskListView, UserTaskDetailView, UserTaskClosureView, Us
 app_name = "tasks"
 urlpatterns = [
     path("user-tasks/", UserTaskListView.as_view(is_admin_route=False), name="my-task-list"),
-    path("users/<int:pk>/tasks/", UserTaskListView.as_view(is_admin_route=True), name="user-task-list"),
-    path("user-tasks/<int:pk>/", UserTaskDetailView.as_view(), name="user-task-detail"),
-    path("user-tasks/<int:pk>/close/", UserTaskClosureView.as_view(), name="user-task-close"),
-    path("user-tasks/<int:pk>/reissue/", UserTaskReissueView.as_view(), name="user-task-reissue")
+    path("users/<int:pk>/tasks/", UserTaskListView.as_view(is_admin_route=True), name="other-task-list"),
+    path("user-tasks/<int:pk>/", UserTaskDetailView.as_view(), name="task-detail"),
+    path("user-tasks/<int:pk>/close/", UserTaskClosureView.as_view(), name="task-close"),
+    path("user-tasks/<int:pk>/reissue/", UserTaskReissueView.as_view(), name="task-reissue")
 ]

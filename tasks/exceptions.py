@@ -10,5 +10,5 @@ class TaskStatusError(TaskError):
     def __init__(self, message, status):
         super().__init__(
             message=message,
-            code=f"task_{status}"
+            code=f"task_status_{status}"
         )
