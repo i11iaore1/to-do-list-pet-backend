@@ -11,7 +11,7 @@ def update_task(task, fields):
     if task.is_closed:
         raise TaskStatusError("Task is closed and can not be updated. Reissue this task to update it.", "closed")
 
-    if task.is_due_date_passed:
+    if not task.is_current:
         raise TaskStatusError("Task is expired and can not be updated. Reissue this task to update it.", "expired")
 
     if "is_closed" in fields:
@@ -37,11 +37,11 @@ def close_task(task):
     """
     Expects Task Object
     """
-    # if task.is_due_date_passed:
-    #     raise TaskStatusError("Task is expired and can not be closed.", "expired")
-
     if task.is_closed:
         raise TaskStatusError("Task is already closed.", "closed")
+
+    # if not task.is_current:
+    #     raise TaskStatusError("Task is expired and can not be closed.", "expired")
 
     task.is_closed = True
     task.save(update_fields=["is_closed", "updated_at"])
@@ -53,7 +53,7 @@ def reissue_task(task, new_due_date):
     """
     Expects Task Object and validated datetime
     """
-    if not task.is_closed and not task.is_due_date_passed:
+    if not task.is_closed and task.is_current:
         raise TaskStatusError("Task is currenty active and can not be reissued.", "active")
 
     task.is_closed = False

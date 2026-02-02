@@ -5,11 +5,11 @@ from .validators import validate_future_date
 
 
 class BaseTaskSerializer(serializers.ModelSerializer):
-    is_due_date_passed = serializers.ReadOnlyField()
+    is_current = serializers.ReadOnlyField()
 
     class Meta:
         model = Task
-        fields = ("pk", "description", "is_closed", "is_due_date_passed", "due_date", "created_at", "updated_at")
+        fields = ("pk", "description", "is_closed", "is_current", "due_date", "created_at", "updated_at")
         read_only_fields = ("pk", "created_at", "updated_at")
 
     def validate_due_date(self, value):
@@ -19,7 +19,7 @@ class BaseTaskSerializer(serializers.ModelSerializer):
 class TaskInfoSerializer(BaseTaskSerializer):
     """
     ONLY FOR SEREALIZATION\n
-    returns (pk, description, is_closed, is_due_date_passed, due_date, created_at, updated_at)
+    returns (pk, description, is_closed, is_current, due_date, created_at, updated_at)
     """
     class Meta(BaseTaskSerializer.Meta):
         read_only_fields = BaseTaskSerializer.Meta.fields
@@ -28,7 +28,7 @@ class TaskInfoSerializer(BaseTaskSerializer):
 class UserTaskInfoSerializer(TaskInfoSerializer):
     """
     ONLY FOR SEREALIZATION\n
-    returns (pk, description, is_closed, is_due_date_passed, due_date, user_id, created_at, updated_at)
+    returns (pk, description, is_closed, is_current, due_date, user_id, created_at, updated_at)
     """
     user_id = serializers.IntegerField(source="user.pk", read_only=True)
 
@@ -56,7 +56,6 @@ class ReissuingTaskSerializer(BaseTaskSerializer):
     ONLY FOR DESEREALIZATION\n
     expects (due_date)
     """
-    # due_date = serializers.DateTimeField(required=True, allow_null=True)
 
     class Meta(BaseTaskSerializer.Meta):
         fields = ("due_date", )

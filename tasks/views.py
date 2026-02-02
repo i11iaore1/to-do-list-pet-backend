@@ -5,13 +5,16 @@ from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.filters import OrderingFilter
 
-from core.utils.filters import filter_tasks_by_status
+from django_filters.rest_framework import DjangoFilterBackend
+
 from core.pagination import NormalDataPagination
 from .models import UserTask
 from .serializers import TaskInfoSerializer, UserTaskInfoSerializer, InputTaskSerializer, ReissuingTaskSerializer
 from .permissions import IsTaskOwnerOrStaff
 from .services.task_management import update_task, delete_task, close_task, reissue_task
+from .filters import TaskFilter
 
 
 User = get_user_model()
@@ -22,6 +25,11 @@ class UserTaskListView(generics.GenericAPIView):
 
     queryset = UserTask.objects.all()
     pagination_class = NormalDataPagination
+    filterset_class = TaskFilter
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+
+    ordering_filters = ["due_date", "created_at"]
+    ordering = ["due_date"]
 
     def get_permissions(self):
         if self.is_admin_route:
@@ -38,6 +46,8 @@ class UserTaskListView(generics.GenericAPIView):
 
     def get(self, request, *args, **kwargs):
         queryset = self.get_queryset()
+        queryset = self.filter_queryset(queryset)
+
         page = self.paginate_queryset(queryset)
 
         if page is not None:
@@ -49,15 +59,8 @@ class UserTaskListView(generics.GenericAPIView):
 
     def get_queryset(self):
         if self.is_admin_route:
-            queryset = UserTask.objects.filter(user_id=self.kwargs["pk"])
-        else:
-            queryset = UserTask.objects.filter(user=self.request.user)
-
-        task_status = self.request.query_params.get("status")
-        if task_status:
-            queryset = filter_tasks_by_status(queryset, task_status)
-
-        return queryset
+            return UserTask.objects.filter(user_id=self.kwargs["pk"])
+        return UserTask.objects.filter(user=self.request.user)
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)

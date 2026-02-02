@@ -10,10 +10,8 @@ class Task(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     @property
-    def is_due_date_passed(self):
-        if self.due_date:
-            return self.due_date < timezone.now()
-        return False
+    def is_current(self):
+        return self.due_date is None or self.due_date >= timezone.now()
 
     def __str__(self):
         return f"{self.pk} {self.description[:20]}"
