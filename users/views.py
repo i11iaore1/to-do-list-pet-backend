@@ -60,7 +60,7 @@ class LoginView(generics.GenericAPIView):
         )
 
 
-class UserSingularView(generics.GenericAPIView):
+class UserDetailView(generics.GenericAPIView):
     queryset = User.objects.all()
     permission_classes = (IsAccountOwnerOrAdmin, )
     serializer_class = UserProfileInfoSerializer
