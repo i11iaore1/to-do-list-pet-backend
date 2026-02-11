@@ -1,2 +1,2 @@
 ## Logical ERD
-<img width="4000" height="2206" alt="dbdiagram io_d" src="https://github.com/user-attachments/assets/f7830981-b163-4b97-9f7f-3170ffca0151" />
+<img width="1299" height="954" alt="image" src="https://github.com/user-attachments/assets/1d01d23b-21d7-4977-8869-b36b8a56279e" />
