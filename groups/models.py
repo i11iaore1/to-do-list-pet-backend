@@ -1,4 +1,6 @@
 from django.db import models
+from django.utils import timezone
+
 from tasks.models import Task
 
 
@@ -7,12 +9,20 @@ class Group(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def get_relevant_tasks(self):
+        return self.tasks.filter(
+            is_closed=False
+        ).filter(
+            models.Q(due_date__gte=timezone.now()) | models.Q(due_date__isnull=True)
+        )
+
     def __str__(self):
         return f"{self.pk} {self.name}"
 
 
 class GroupTask(Task):
-    creator = models.ForeignKey("groups.Member", null=True, on_delete=models.SET_NULL)
+    group = models.ForeignKey("groups.Group", on_delete=models.CASCADE, related_name="tasks")
+    creator = models.ForeignKey("groups.Member", null=True, on_delete=models.SET_NULL, related_name="created_tasks")
 
     def __str__(self):
         return f"{self.pk}"
