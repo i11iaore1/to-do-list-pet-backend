@@ -51,12 +51,11 @@ class InputTaskSerializer(BaseTaskSerializer):
         }
 
 
-class ReissuingTaskSerializer(BaseTaskSerializer):
+class TaskReissueSerializer(BaseTaskSerializer):
     """
     ONLY FOR DESEREALIZATION\n
     expects (due_date)
     """
-
     class Meta(BaseTaskSerializer.Meta):
         fields = ("due_date", )
 

@@ -2,6 +2,7 @@ from django.db import transaction
 
 from rest_framework.exceptions import ValidationError, PermissionDenied
 
+from groups.exceptions import GroupError
 from groups.models import Member
 
 
@@ -9,11 +10,9 @@ def transfer_group_ownership(new_owner):
     """
     Takes in a Member object
     """
-
     with transaction.atomic():
         group = new_owner.group
-        current_owner = Member.objects.select_for_update().filter(
-            group=group,
+        current_owner = group.members.select_for_update().filter(
             role=Member.RoleChoices.OWNER
         ).first()
 
@@ -24,9 +23,13 @@ def transfer_group_ownership(new_owner):
         new_owner.role = Member.RoleChoices.OWNER
         new_owner.save()
 
+
 def create_member(request_user, group, target_user_id, role):
     if not request_user.is_staff:
-        request_user_membership = Member.objects.filter(user=request_user, group=group).first()
+        request_user_membership = group.members.filter(
+            user=request_user,
+            group=group
+        ).first()
 
         if not request_user_membership:
             raise PermissionDenied("You are not a member of this group.")
@@ -38,28 +41,37 @@ def create_member(request_user, group, target_user_id, role):
             if role in Member.ADMIN_ROLES:
                 raise PermissionDenied("You are not allowed to assign this role.")
 
+    if group.members.filter(user_id=target_user_id).exists():
+        raise GroupError("This user is already a member of this group", "already_member")
+
     with transaction.atomic():
-        new_member = Member.objects.create(group=group, user_id=target_user_id, role=role)
+        new_member = group.members.create(
+            user_id=target_user_id,
+            role=role
+        )
         if role == Member.RoleChoices.OWNER:
             transfer_group_ownership(new_member)
 
     return new_member
 
+
 def update_member_role(request_user, target_member, role):
+    if not request_user.is_staff:
+        request_user_membership = target_member.group.members.filter(
+            user=request_user
+        ).first()
+
+        if not request_user_membership:
+            raise PermissionDenied("You are not a member of this group.")
+
+        if request_user_membership.role != Member.RoleChoices.OWNER:
+            raise PermissionDenied("You are not allowed to manage roles in this group.")
+
+    if target_member.role == Member.RoleChoices.OWNER:
+        if role != Member.RoleChoices.OWNER:
+            raise ValidationError({"detail":"A group should always have an owner. Transfer ownership instead."})
+
     with transaction.atomic():
-        if not request_user.is_staff:
-            request_user_membership = Member.objects.filter(user=request_user, group=target_member.group).first()
-
-            if not request_user_membership:
-                raise PermissionDenied("You are not a member of this group.")
-
-            if request_user_membership.role != Member.RoleChoices.OWNER:
-                raise PermissionDenied("You are not allowed to manage roles in this group.")
-
-        if target_member.role == Member.RoleChoices.OWNER:
-            if role != Member.RoleChoices.OWNER:
-                raise ValidationError({"detail":"A group should always have an owner. Transfer ownership instead."})
-
         if role == Member.RoleChoices.OWNER and target_member.role != Member.RoleChoices.OWNER:
             transfer_group_ownership(target_member)
         else:
@@ -77,10 +89,8 @@ def delete_member(request_user, target_member):
         return
 
     if not request_user.is_staff:
-        group = target_member.group
-        request_user_membership = Member.objects.filter(
-            user=request_user,
-            group=group
+        request_user_membership = target_member.group.members.filter(
+            user=request_user
         ).first()
 
         if not request_user_membership:

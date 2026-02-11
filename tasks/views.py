@@ -11,7 +11,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 
 from core.pagination import NormalDataPagination
 from .models import UserTask
-from .serializers import TaskInfoSerializer, UserTaskInfoSerializer, InputTaskSerializer, ReissuingTaskSerializer
+from .serializers import TaskInfoSerializer, UserTaskInfoSerializer, InputTaskSerializer, TaskReissueSerializer
 from .permissions import IsTaskOwnerOrStaff
 from .services.task_management import update_task, delete_task, close_task, reissue_task
 from .filters import TaskFilter
@@ -86,13 +86,13 @@ class UserTaskListView(generics.GenericAPIView):
 
 class UserTaskDetailView(generics.GenericAPIView):
     queryset = UserTask.objects.all()
+    serializer_class = UserTaskInfoSerializer
     permission_classes = [IsTaskOwnerOrStaff]
-    response_serializer = UserTaskInfoSerializer
 
     def get_serializer_class(self):
         if self.request.method in ("PATCH", "PUT"):
             return InputTaskSerializer
-        return self.response_serializer
+        return self.serializer_class
 
     def get(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -107,7 +107,7 @@ class UserTaskDetailView(generics.GenericAPIView):
 
         user_task = update_task(instance, serializer.validated_data)
 
-        return Response(self.response_serializer(user_task).data)
+        return Response(self.serializer_class(user_task).data)
 
     def delete(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -116,35 +116,70 @@ class UserTaskDetailView(generics.GenericAPIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class UserTaskClosureView(generics.GenericAPIView):
-    queryset = UserTask.objects.all()
-    permission_classes = [IsTaskOwnerOrStaff]
-    serializer_class = UserTaskInfoSerializer
+# Task state management views
+
+class TaskCloseView(generics.GenericAPIView):
+    def get_permissions(self):
+        raise NotImplementedError(f"Implement get_permissions in {self.__class__}")
+
+    def get_queryset(self):
+        raise NotImplementedError(f"Implement get_queryset in {self.__class__}")
+
+    def get_serializer_class(self):
+        raise NotImplementedError(f"Implement get_serializer_class in {self.__class__}")
 
     def post(self, request, *args, **kwargs):
         with transaction.atomic():
-            instance = self.get_queryset().select_for_update().get(pk=kwargs["pk"])
-            self.check_object_permissions(request, instance)
-            close_task(instance)
+            task = get_object_or_404(self.get_queryset().select_for_update(), pk=kwargs["pk"])
+            self.check_object_permissions(request, task)
+            task = close_task(task)
 
-            serializer = self.get_serializer(instance)
-
-            return Response(serializer.data)
+            return Response(self.get_serializer(task).data)
 
 
-class UserTaskReissueView(generics.GenericAPIView):
-    queryset = UserTask.objects.all()
-    permission_classes = [IsTaskOwnerOrStaff]
-    serializer_class = ReissuingTaskSerializer
-    response_serializer = UserTaskInfoSerializer
+class TaskReissueView(generics.GenericAPIView):
+    def get_permissions(self):
+        raise NotImplementedError(f"Implement get_permissions in {self.__class__}")
+
+    def get_queryset(self):
+        raise NotImplementedError(f"Implement get_queryset in {self.__class__}")
+
+    def get_serializer_class(self):
+        raise NotImplementedError(f"Implement get_serializer_class in {self.__class__}")
 
     def post(self, request, *args, **kwargs):
+        serializer = TaskReissueSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
         with transaction.atomic():
-            instance = self.get_queryset().select_for_update().get(pk=self.kwargs["pk"])
-            self.check_object_permissions(request, instance)
+            task = get_object_or_404(self.get_queryset().select_for_update(), pk=kwargs["pk"])
+            self.check_object_permissions(request, task)
 
-            serializer = self.get_serializer(instance, data=request.data)
-            serializer.is_valid(raise_exception=True)
-            user_task = reissue_task(instance, serializer.validated_data["due_date"])
+            task = reissue_task(
+                task,
+                serializer.validated_data["due_date"]
+            )
 
-            return Response(self.response_serializer(user_task).data)
+            return Response(self.get_serializer(task).data)
+
+
+class UserTaskCloseView(TaskCloseView):
+    def get_permissions(self):
+        return [IsTaskOwnerOrStaff()]
+
+    def get_queryset(self):
+        return UserTask.objects.all()
+
+    def get_serializer_class(self):
+        return TaskInfoSerializer
+
+
+class UserTaskReissueView(TaskReissueView):
+    def get_permissions(self):
+        return [IsTaskOwnerOrStaff()]
+
+    def get_queryset(self):
+        return UserTask.objects.all()
+
+    def get_serializer_class(self):
+        return TaskInfoSerializer
