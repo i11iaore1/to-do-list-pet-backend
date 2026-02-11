@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from tasks.exceptions import TaskError
-# from groups.exceptions import MembershipError
+from groups.exceptions import GroupError
 
 
 def custom_exception_handler(exception, context):
@@ -14,7 +14,7 @@ def custom_exception_handler(exception, context):
     if response is None:
         if isinstance(exception, (
             TaskError,
-            # MembershipError
+            GroupError
         )):
             response = Response(
                 {
