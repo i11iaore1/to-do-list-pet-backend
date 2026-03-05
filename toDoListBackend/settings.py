@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "corsheaders",
     "rest_framework",
+    'drf_spectacular',
     'django_filters',
     "users",
     "tasks",
@@ -137,7 +138,20 @@ REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "core.exception_handler.custom_exception_handler",
     "DEFAULT_FILTER_BACKENDS": (
         'django_filters.rest_framework.DjangoFilterBackend',
-    )
+    ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+
+# DRF Spectacular
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'To-Do List API',
+    'DESCRIPTION': 'Pet project documentation',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_PATCH': True,
+    'COMPONENT_SPLIT_REQUEST': True,
 }
 
 
