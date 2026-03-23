@@ -16,11 +16,13 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get("DJANGO_DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["127.0.0.1", "localhost", "backend"]
 
+CORS_ALLOW_CREDENTIALS = True
 # CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
+    "http://localhost:5173",
 ]
 
 # Application definition
@@ -34,8 +36,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "corsheaders",
     "rest_framework",
-    'drf_spectacular',
-    'django_filters',
+    "drf_spectacular",
+    "django_filters",
     "users",
     "tasks",
     "groups",
@@ -84,7 +86,7 @@ DATABASES = {
         "PORT": os.environ.get("POSTGRES_PORT"),
         "NAME": os.environ.get("POSTGRES_DB"),
         "USER": os.environ.get("POSTGRES_USER"),
-        "PASSWORD": os.environ.get("POSTGRES_PASSWORD")
+        "PASSWORD": os.environ.get("POSTGRES_PASSWORD"),
     }
 }
 
@@ -132,26 +134,22 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
-    "DEFAULT_PERMISSION_CLASSES": (
-        "rest_framework.permissions.IsAuthenticated",
-    ),
+    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "EXCEPTION_HANDLER": "core.exception_handler.custom_exception_handler",
-    "DEFAULT_FILTER_BACKENDS": (
-        'django_filters.rest_framework.DjangoFilterBackend',
-    ),
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    "DEFAULT_FILTER_BACKENDS": ("django_filters.rest_framework.DjangoFilterBackend",),
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
 
 # DRF Spectacular
 
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'To-Do List API',
-    'DESCRIPTION': 'Pet project documentation',
-    'VERSION': '1.0.0',
-    'SERVE_INCLUDE_SCHEMA': False,
-    'COMPONENT_SPLIT_PATCH': True,
-    'COMPONENT_SPLIT_REQUEST': True,
+    "TITLE": "To-Do List API",
+    "DESCRIPTION": "Pet project documentation",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "COMPONENT_SPLIT_PATCH": True,
+    "COMPONENT_SPLIT_REQUEST": True,
 }
 
 
@@ -164,4 +162,11 @@ SIMPLE_JWT = {
     "UPDATE_LAST_LOGIN": True,
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
+    "REFRESH_TOKEN_COOKIE": {
+        "KEY": "refresh_token",
+        "SECURE": not DEBUG,
+        "HTTP_ONLY": True,
+        "PATH_NAME": "users:token-refresh",
+        "SAMESITE": "Lax",
+    },
 }
