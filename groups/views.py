@@ -19,11 +19,36 @@ from tasks.serializers import InputTaskSerializer, TaskInfoSerializer
 from tasks.services.task_management import delete_task, update_task
 
 from .models import Group, GroupTask, Member, MemberTaskRelation
-from .serializers import GroupDetailSerializer, GroupListSerializer, MemberInfoSerializer, CreateMemberSerializer, MemberTaskRelationCreateSerializer, MemberTaskRelationMinimalDetailSerializer, MemberTaskRelationUpdateSerializer, UpdateMemberSerializer, GroupTaskInfoSerializer, MemberTaskRelationListSerializer, MemberTaskRelationDetailSerializer
-from .permissions import GroupPermissions, GroupTaskPermissions, IsTargetMemberOrTaskCreatorOrGroupAdminOrStaff
-from .filters import GroupFilter, GroupTaskFilter, MemberFilter, MemberTaskRelationFilter
+from .serializers import (
+    GroupDetailSerializer,
+    GroupListSerializer,
+    MemberInfoSerializer,
+    CreateMemberSerializer,
+    MemberTaskRelationCreateSerializer,
+    MemberTaskRelationMinimalDetailSerializer,
+    MemberTaskRelationUpdateSerializer,
+    UpdateMemberSerializer,
+    GroupTaskInfoSerializer,
+    MemberTaskRelationListSerializer,
+    MemberTaskRelationDetailSerializer,
+)
+from .permissions import (
+    GroupPermissions,
+    GroupTaskPermissions,
+    IsTargetMemberOrTaskCreatorOrGroupAdminOrStaff,
+)
+from .filters import (
+    GroupFilter,
+    GroupTaskFilter,
+    MemberFilter,
+    MemberTaskRelationFilter,
+)
 
-from .services.membership_management import create_member, update_member_role, delete_member
+from .services.membership_management import (
+    create_member,
+    update_member_role,
+    delete_member,
+)
 from .services.group_task_management import create_group_task
 from .services.member_task_relation_management import create_member_task_relation
 
@@ -41,8 +66,8 @@ class GroupListView(GenericAPIView):
     filterset_class = GroupFilter
     filter_backends = [DjangoFilterBackend, OrderingFilter]
 
-    ordering_fields = ["name", "joined_at"]
-    ordering = ["-joined_at"]
+    ordering_fields = ["name", "joined_at", "pk"]
+    ordering = ["-joined_at", "pk"]
 
     def get_permissions(self):
         if self.is_admin_route:
@@ -58,9 +83,7 @@ class GroupListView(GenericAPIView):
         else:
             user = self.request.user
 
-        return Group.objects.filter(
-            members__user=user
-        ).annotate(
+        return Group.objects.filter(members__user=user).annotate(
             joined_at=F("members__joined_at")
         )
 
@@ -90,15 +113,9 @@ class GroupListView(GenericAPIView):
         with transaction.atomic():
             new_group = serializer.save()
 
-            new_group.members.create(
-                user = user,
-                role=Member.RoleChoices.OWNER
-            )
+            new_group.members.create(user=user, role=Member.RoleChoices.OWNER)
 
-        return Response(
-            serializer.data,
-            status=status.HTTP_201_CREATED
-        )
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class GroupDetailView(GenericAPIView):
@@ -107,9 +124,9 @@ class GroupDetailView(GenericAPIView):
 
     def get_permissions(self):
         if self.request.method == "GET":
-            permission_classes =  [GroupPermissions.IsGroupMemberOrStaff]
+            permission_classes = [GroupPermissions.IsGroupMemberOrStaff]
         elif self.request.method in ("PATCH", "PUT", "DELETE"):
-            permission_classes =  [GroupPermissions.IsGroupOwnerOrStaff]
+            permission_classes = [GroupPermissions.IsGroupOwnerOrStaff]
         else:
             permission_classes = [IsAuthenticated]
         return [permission_class() for permission_class in permission_classes]
@@ -119,9 +136,7 @@ class GroupDetailView(GenericAPIView):
         group_tasks = instance.get_relevant_tasks()
 
         if not request.user.is_staff:
-            request_user_membership = instance.members.filter(
-                user=request.user
-            ).first()
+            request_user_membership = instance.members.filter(user=request.user).first()
 
             if not request_user_membership:
                 raise PermissionDenied("You are not a member of this group.")
@@ -140,7 +155,7 @@ class GroupDetailView(GenericAPIView):
             {
                 **self.get_serializer(instance).data,
                 "tasks": GroupTaskInfoSerializer(group_tasks[:10], many=True).data,
-                "members": MemberInfoSerializer(members[:10], many=True).data
+                "members": MemberInfoSerializer(members[:10], many=True).data,
             }
         )
 
@@ -167,8 +182,8 @@ class MemberListView(GenericAPIView):
     filterset_class = MemberFilter
     filter_backends = [DjangoFilterBackend, OrderingFilter]
 
-    ordering_fields = ["nickname", "joined_at"]
-    ordering = ["joined_at"]
+    ordering_fields = ["nickname", "joined_at", "pk"]
+    ordering = ["joined_at", "pk"]
 
     def get_permissions(self):
         if self.request.method == "GET":
@@ -214,15 +229,14 @@ class MemberListView(GenericAPIView):
             request_user=request.user,
             group=group,
             target_user_id=serializer.validated_data["user"].id,
-            role=serializer.validated_data["role"]
+            role=serializer.validated_data["role"],
         )
 
         # CreateMemberSerializer has already made a DB-request to check if user exists
         new_member.user = serializer.validated_data["user"]
 
         return Response(
-            MemberInfoSerializer(new_member).data,
-            status=status.HTTP_201_CREATED
+            MemberInfoSerializer(new_member).data, status=status.HTTP_201_CREATED
         )
 
 
@@ -236,7 +250,9 @@ class MemberDetailView(GenericAPIView):
         elif self.request.method in ("PATCH", "PUT"):
             permission_classes = [GroupPermissions.IsMembersGroupOwnerOrStaff]
         elif self.request.method == "DELETE":
-            permission_classes = [GroupPermissions.IsMembershipOwnerOrMembersGroupAdminOrStaff]
+            permission_classes = [
+                GroupPermissions.IsMembershipOwnerOrMembersGroupAdminOrStaff
+            ]
         else:
             permission_classes = [IsAuthenticated]
         return [permission_class() for permission_class in permission_classes]
@@ -261,7 +277,7 @@ class MemberDetailView(GenericAPIView):
         member = update_member_role(
             request_user=request.user,
             target_member=instance,
-            role=serializer.validated_data["role"]
+            role=serializer.validated_data["role"],
         )
 
         return Response(MemberInfoSerializer(member).data)
@@ -269,10 +285,7 @@ class MemberDetailView(GenericAPIView):
     def delete(self, request, *args, **kwargs):
         instance = self.get_object()
 
-        delete_member(
-            request_user=request.user,
-            target_member=instance
-        )
+        delete_member(request_user=request.user, target_member=instance)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -287,8 +300,8 @@ class GroupTaskListView(GenericAPIView):
     filterset_class = GroupTaskFilter
     filter_backends = [DjangoFilterBackend, TaskOrderingFilter]
 
-    ordering_fields = ["due_date", "created_at"]
-    ordering = ["due_date"]
+    ordering_fields = ["due_date", "created_at", "pk"]
+    ordering = ["due_date", "pk"]
 
     def get_serializer_class(self):
         if self.request.method == "POST":
@@ -335,24 +348,18 @@ class GroupTaskListView(GenericAPIView):
         serializer.is_valid(raise_exception=True)
 
         new_group_task = create_group_task(
-            request_user=request.user,
-            group=group,
-            task_data=serializer.validated_data
+            request_user=request.user, group=group, task_data=serializer.validated_data
         )
 
         return Response(
-            self.serializer_class(new_group_task).data,
-            status=status.HTTP_201_CREATED
+            self.serializer_class(new_group_task).data, status=status.HTTP_201_CREATED
         )
 
 
 class GroupTaskDetailView(GenericAPIView):
     queryset = GroupTask.objects.select_related(
-        "group",
-        "creator__user"
-    ).prefetch_related(
-        "related_members__member__user"
-    )
+        "group", "creator__user"
+    ).prefetch_related("related_members__member__user")
     serializer_class = GroupTaskInfoSerializer
 
     def get_permissions(self):
@@ -379,9 +386,8 @@ class GroupTaskDetailView(GenericAPIView):
             {
                 **serializer.data,
                 "related_members": MemberTaskRelationListSerializer(
-                    group_task.related_members.all()[:10],
-                    many=True
-                ).data
+                    group_task.related_members.all()[:10], many=True
+                ).data,
             }
         )
 
@@ -437,8 +443,8 @@ class MemberTaskRelationListView(GenericAPIView):
     filterset_class = MemberTaskRelationFilter
     filter_backends = [DjangoFilterBackend, OrderingFilter]
 
-    ordering_fields = ["created_at", "updated_at", "nickname"]
-    ordering = ["created_at"]
+    ordering_fields = ["created_at", "updated_at", "nickname", "pk"]
+    ordering = ["created_at", "pk"]
 
     def get_permissions(self):
         if self.request.method == "POST":
@@ -456,8 +462,7 @@ class MemberTaskRelationListView(GenericAPIView):
 
     def get(self, request, *args, **kwargs):
         group_task = get_object_or_404(
-            GroupTask.objects.select_related("group"),
-            pk=kwargs["pk"]
+            GroupTask.objects.select_related("group"), pk=kwargs["pk"]
         )
         self.check_object_permissions(request, group_task)
 
@@ -478,8 +483,7 @@ class MemberTaskRelationListView(GenericAPIView):
 
     def post(self, request, *args, **kwargs):
         group_task = get_object_or_404(
-            GroupTask.objects.select_related("group"),
-            pk=kwargs["pk"]
+            GroupTask.objects.select_related("group"), pk=kwargs["pk"]
         )
         self.check_object_permissions(request, group_task)
 
@@ -489,19 +493,18 @@ class MemberTaskRelationListView(GenericAPIView):
         new_member_task_relation = create_member_task_relation(
             group_task=group_task,
             target_member=serializer.validated_data["member"],
-            can_edit=serializer.validated_data["can_edit"]
+            can_edit=serializer.validated_data["can_edit"],
         )
 
         return Response(
             self.serializer_class(new_member_task_relation).data,
-            status=status.HTTP_201_CREATED
+            status=status.HTTP_201_CREATED,
         )
 
 
 class MemberTaskRelationDetailView(GenericAPIView):
     queryset = MemberTaskRelation.objects.all().select_related(
-        "group_task__group",
-        "member__user"
+        "group_task__group", "member__user"
     )
     serializer_class = MemberTaskRelationMinimalDetailSerializer
 
@@ -523,16 +526,10 @@ class MemberTaskRelationDetailView(GenericAPIView):
 
     def get(self, request, *args, **kwargs):
         member_task_relation = get_object_or_404(
-            MemberTaskRelation.objects.select_related(
-                "member",
-                "group_task"
-            ),
-            pk=kwargs["pk"]
+            MemberTaskRelation.objects.select_related("member", "group_task"),
+            pk=kwargs["pk"],
         )
-        self.check_object_permissions(
-            request,
-            member_task_relation.group_task
-        )
+        self.check_object_permissions(request, member_task_relation.group_task)
 
         serializer = self.get_serializer(member_task_relation)
 
@@ -545,11 +542,7 @@ class MemberTaskRelationDetailView(GenericAPIView):
 
             self.check_object_permissions(request, instance.group_task)
 
-            serializer = self.get_serializer(
-                instance,
-                data=request.data,
-                partial=True
-            )
+            serializer = self.get_serializer(instance, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
             serializer.save()
 

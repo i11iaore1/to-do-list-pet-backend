@@ -11,7 +11,12 @@ from django_filters.rest_framework import DjangoFilterBackend
 
 from core.pagination import NormalDataPagination
 from .models import UserTask
-from .serializers import TaskInfoSerializer, UserTaskInfoSerializer, InputTaskSerializer, TaskReissueSerializer
+from .serializers import (
+    TaskInfoSerializer,
+    UserTaskInfoSerializer,
+    InputTaskSerializer,
+    TaskReissueSerializer,
+)
 from .permissions import IsTaskOwnerOrStaff
 from .services.task_management import update_task, delete_task, close_task, reissue_task
 from .filters import TaskFilter
@@ -28,8 +33,8 @@ class UserTaskListView(generics.GenericAPIView):
     filterset_class = TaskFilter
     filter_backends = [DjangoFilterBackend, OrderingFilter]
 
-    ordering_filters = ["due_date", "created_at"]
-    ordering = ["due_date"]
+    ordering_filters = ["due_date", "created_at", "pk"]
+    ordering = ["due_date", "pk"]
 
     def get_permissions(self):
         if self.is_admin_route:
@@ -73,14 +78,10 @@ class UserTaskListView(generics.GenericAPIView):
         else:
             target_user = request.user
 
-        new_task = UserTask.objects.create(
-            user=target_user,
-            **user_task_data
-        )
+        new_task = UserTask.objects.create(user=target_user, **user_task_data)
 
         return Response(
-            TaskInfoSerializer(new_task).data,
-            status=status.HTTP_201_CREATED
+            TaskInfoSerializer(new_task).data, status=status.HTTP_201_CREATED
         )
 
 
@@ -118,6 +119,7 @@ class UserTaskDetailView(generics.GenericAPIView):
 
 # Task state management views
 
+
 class TaskCloseView(generics.GenericAPIView):
     def get_permissions(self):
         raise NotImplementedError(f"Implement get_permissions in {self.__class__}")
@@ -130,7 +132,9 @@ class TaskCloseView(generics.GenericAPIView):
 
     def post(self, request, *args, **kwargs):
         with transaction.atomic():
-            task = get_object_or_404(self.get_queryset().select_for_update(), pk=kwargs["pk"])
+            task = get_object_or_404(
+                self.get_queryset().select_for_update(), pk=kwargs["pk"]
+            )
             self.check_object_permissions(request, task)
             task = close_task(task)
 
@@ -152,13 +156,12 @@ class TaskReissueView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
 
         with transaction.atomic():
-            task = get_object_or_404(self.get_queryset().select_for_update(), pk=kwargs["pk"])
+            task = get_object_or_404(
+                self.get_queryset().select_for_update(), pk=kwargs["pk"]
+            )
             self.check_object_permissions(request, task)
 
-            task = reissue_task(
-                task,
-                serializer.validated_data["due_date"]
-            )
+            task = reissue_task(task, serializer.validated_data["due_date"])
 
             return Response(self.get_serializer(task).data)
 
